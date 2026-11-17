@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><title>Aero Data Visualize</title>
+<style>html{background:#0C0C0E;color:#8E9099;font:15px -apple-system,Arial,sans-serif}</style>
+<script>
+// GitHub Pages geeft deze pagina als een bestand niet bestaat. De echte bestanden staan versleuteld; zonder actieve
+// service worker (eerste bezoek, harde herlaadactie) dus altijd terug naar het inlogscherm, met het pad om daarna naartoe te gaan.
+(function () {
+  var p = location.pathname, i = p.indexOf('/', 1), basis = i > 0 ? p.slice(0, i + 1) : '/';
+  var rest = p.slice(basis.length), lus = false;
+  // nooit eindeloos heen en weer: vaker dan 3 keer per 30 s hier, dan het inlogscherm met een melding (zonder doorsturen)
+  try { var nu = Date.now(), l = JSON.parse(sessionStorage.getItem('aero_404') || '[]').filter(function (t) { return nu - t < 30000; }); l.push(nu); sessionStorage.setItem('aero_404', JSON.stringify(l)); lus = l.length > 3; } catch (e) {}
+  location.replace(basis + (lus ? '?lus=1' : rest && !/^x\//.test(rest) ? '?terug=' + encodeURIComponent(decodeURIComponent(rest)) : ''));
+})();
+</script>
+<p>Doorsturen naar het inlogscherm…</p>

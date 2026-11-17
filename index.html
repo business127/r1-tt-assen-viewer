@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0C0C0E">
+<title>Aero Data Visualize · Inloggen</title>
+<link rel="icon" href="data:,">
+<link rel="preload" href="login/barlow-condensed-800-italic.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  @font-face { font-family: "Barlow Condensed"; font-style: italic; font-weight: 800; font-display: swap; src: url(login/barlow-condensed-800-italic.woff2) format("woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url(login/barlow-condensed-600.woff2) format("woff2"); }
+  :root { --bg: #0C0C0E; --paneel: rgba(24, 24, 30, .86); --rand: #2E2E38; --tekst: #E9E9EC; --sub: #8E9099; --oranje: #FBB040; --fout: #FF6B5B; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--tekst); }
+  body {
+    min-height: 100svh; display: grid; place-items: center;
+    padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    font: 15px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    background:
+      repeating-linear-gradient(-62deg, transparent 0 46px, rgba(251, 176, 64, .035) 46px 48px),
+      radial-gradient(120% 80% at 50% 110%, #1d1a14 0%, var(--bg) 60%);
+  }
+  main { width: min(380px, 100%); }
+  .merk { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; }
+  .merk img { width: 92px; height: auto; }
+  .merk span { font: 600 13px/1.1 "Barlow Condensed", Arial Narrow, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--sub); border-left: 1px solid var(--rand); padding-left: 12px; }
+  h1 { margin: 0 0 4px; font: italic 800 40px/0.95 "Barlow Condensed", Arial Narrow, sans-serif; text-transform: uppercase; letter-spacing: .01em; }
+  h1 b { color: var(--oranje); font-weight: 800; }
+  .ondertitel { margin: 0 0 22px; color: var(--sub); font-size: 14px; }
+  form { background: var(--paneel); border: 1px solid var(--rand); border-radius: 12px; padding: 20px 18px 18px; border-top: 3px solid var(--oranje); }
+  label { display: block; font: 600 12px/1 "Barlow Condensed", Arial Narrow, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--sub); margin: 0 0 6px; }
+  input { width: 100%; height: 46px; padding: 0 12px; margin: 0 0 16px; border-radius: 8px; border: 1px solid #3A3A46; background: #121217; color: var(--tekst); font: 16px -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  input:focus { outline: 2px solid var(--oranje); outline-offset: 1px; border-color: transparent; }
+  button { width: 100%; height: 48px; border: 0; border-radius: 8px; background: var(--oranje); color: #141414; cursor: pointer; font: italic 800 20px/1 "Barlow Condensed", Arial Narrow, sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  button:disabled { opacity: .6; cursor: progress; }
+  button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  #melding { min-height: 20px; margin: 12px 0 0; font-size: 14px; color: var(--fout); }
+  #melding.ok { color: var(--sub); }
+  .voet { margin: 18px 2px 0; color: #5E6069; font-size: 12px; display: flex; justify-content: space-between; gap: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="merk"><img src="login/aero-racing-logo-liggend.png" alt="Aero Racing" width="92" height="35"><span>Data Visualize</span></div>
+  <h1>R1 <b>#76</b> · TT Assen</h1>
+  <p class="ondertitel">Telemetrie en simulatie. Alleen voor het team.</p>
+  <form id="form" autocomplete="on" novalidate>
+    <label for="gebruiker">Gebruikersnaam</label>
+    <input id="gebruiker" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    <label for="wachtwoord">Wachtwoord</label>
+    <input id="wachtwoord" name="password" type="password" autocomplete="current-password" required>
+    <button id="knop" type="submit">Inloggen</button>
+    <p id="melding" role="status" aria-live="polite"></p>
+  </form>
+  <div class="voet"><span>Aero Racing</span><span>versie b1e9b58</span></div>
+</main>
+<script>
+// Inloggen = de sleutel afleiden uit gebruikersnaam + wachtwoord (PBKDF2, 600.000 rondes) en controleren of de viewer
+// daarmee te ontsleutelen is. Er staat geen wachtwoord in deze pagina; zonder het goede wachtwoord is de site onleesbaar.
+(function () {
+  var VERSIE = 'b1e9b58', SALT = '3cf730240ce94d1a5d2ba05283871bf1', RONDES = 600000;
+  var $ = function (id) { return document.getElementById(id); };
+  var melding = function (t, ok) { $('melding').textContent = t; $('melding').className = ok ? 'ok' : ''; };
+  var q = new URLSearchParams(location.search);
+  var terug = q.get('terug') || 'viewer/';
+  if (!/^[\w\-./ ]+$/.test(terug) || terug.indexOf('..') >= 0 || terug.charAt(0) === '/') terug = 'viewer/';
+  var doel = function () { return terug + (terug.indexOf('?') < 0 ? '?v=' + VERSIE : ''); };
+
+  if (!('serviceWorker' in navigator) || !window.crypto || !crypto.subtle || !window.indexedDB || !window.DecompressionStream) {
+    melding('Deze browser kan de beveiligde viewer niet openen (geen service worker of te oud). Gebruik een recente Safari of Chrome, niet in privémodus.');
+    $('knop').disabled = true; return;
+  }
+  var swFout = false;
+  var klaar = navigator.serviceWorker.register('sw.js?v=' + VERSIE, { scope: './' }).then(function () { return navigator.serviceWorker.ready; })
+    .catch(function (e) { swFout = true; throw e; });
+  klaar.catch(function () { melding('Deze browser blokkeert de beveiligde viewer (service worker start niet). Gebruik Safari of Chrome, niet in privémodus.'); });
+
+  function db(fn) {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open('aero', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('k'); };
+      r.onerror = function () { rej(r.error); };
+      r.onsuccess = function () { var tx = r.result.transaction('k', 'readwrite'); var v = fn(tx.objectStore('k')); tx.oncomplete = function () { res(v && v.result); }; tx.onerror = function () { rej(tx.error); }; };
+    });
+  }
+  var hex = function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); };
+  var vanHex = function (h) { var u = new Uint8Array(h.length / 2); for (var i = 0; i < u.length; i++) u[i] = parseInt(h.substr(i * 2, 2), 16); return u; };
+
+  // Sleutels worden als ruwe bytes bewaard: Safari kan een opgeslagen CryptoKey wel in de pagina lezen, maar niet in de
+  // service worker. Dan stuurde de pagina door naar de viewer, gaf de worker 'niet ingelogd' terug en begon het opnieuw (lus).
+  var DUUR = 30 * 24 * 3600 * 1000;
+  var BLOKKADE = 'Ingelogd, maar deze browser opent de beveiligde viewer niet (service worker werkt hier niet). Open de link in Safari of Chrome zelf, niet in een app of privévenster.';
+
+  // Werkt de service worker echt? Vraag via hem de viewer op: alleen hij kan die ontsleutelen (GitHub zelf geeft 404).
+  function controleSW() {
+    return klaar.then(function () {
+      if (navigator.serviceWorker.controller) return;
+      return new Promise(function (res) { navigator.serviceWorker.addEventListener('controllerchange', res, { once: true }); setTimeout(res, 3000); });
+    }).then(function () {
+      if (!navigator.serviceWorker.controller) return false;
+      return fetch('viewer/index.html?controle=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok && /text\/html/.test(r.headers.get('content-type') || ''); });
+    }).catch(function () { return false; });
+  }
+  // nooit eindeloos heen en weer: hooguit 2 keer automatisch doorsturen per 30 s
+  function magDoorsturen() {
+    try {
+      var nu = Date.now(), l = JSON.parse(sessionStorage.getItem('aero_door') || '[]').filter(function (t) { return nu - t < 30000; });
+      if (l.length >= 2 || q.get('lus')) return false;
+      l.push(nu); sessionStorage.setItem('aero_door', JSON.stringify(l)); return true;
+    } catch (e) { return !q.get('lus'); }
+  }
+  function naarViewer() {
+    return controleSW().then(function (ok) {
+      if (!ok) { $('knop').disabled = false; melding(BLOKKADE); return; }
+      if (!magDoorsturen()) { $('knop').disabled = false; melding('Doorsturen naar de viewer lukte niet. Log opnieuw in, of open de link in Safari of Chrome zelf.'); return; }
+      melding('Ingelogd.', true); location.replace(doel());
+    });
+  }
+
+  // uitloggen: ?uit=1
+  if (q.get('uit')) {
+    db(function (s) { s.delete('sleutel'); }).catch(function () {});
+    klaar.then(function (reg) { if (reg.active) reg.active.postMessage('uit'); });
+    history.replaceState(null, '', location.pathname);
+    melding('Je bent uitgelogd.', true);
+  } else {
+    // al ingelogd op dit apparaat: door naar de viewer (een sleutel in het oude formaat wordt gewist: opnieuw inloggen)
+    if (q.get('lus')) melding('Doorsturen naar de viewer liep steeds rond. Log opnieuw in; blijft het zo, open de link dan in Safari of Chrome zelf.');
+    db(function (s) { return s.get('sleutel'); }).then(function (k) {
+      if (!k) return;
+      if (!(k.aes instanceof Uint8Array) || Date.now() - k.t > DUUR) { db(function (s) { s.delete('sleutel'); }); klaar.then(function (reg) { if (reg.active) reg.active.postMessage('uit'); }); return; }
+      $('knop').disabled = true; melding('Je bent nog ingelogd, even controleren…', true);
+      naarViewer();
+    }).catch(function () {});
+  }
+
+  $('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var gebruiker = $('gebruiker').value.trim().toLowerCase(), wachtwoord = $('wachtwoord').value;
+    if (!gebruiker || !wachtwoord) { melding('Vul je gebruikersnaam en wachtwoord in.'); return; }
+    $('knop').disabled = true; melding('Bezig met controleren…', true);
+    var enc = new TextEncoder(), bits, aes, hmac, stap = 'wachtwoord';
+    crypto.subtle.importKey('raw', enc.encode(gebruiker + '\n' + wachtwoord), 'PBKDF2', false, ['deriveBits'])
+      .then(function (basis) { return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: vanHex(SALT), iterations: RONDES }, basis, 512); })
+      .then(function (b) {
+        bits = new Uint8Array(b);
+        return Promise.all([
+          crypto.subtle.importKey('raw', bits.slice(0, 32), 'AES-GCM', false, ['decrypt']),
+          crypto.subtle.importKey('raw', bits.slice(32), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
+        ]);
+      })
+      .then(function (k) {
+        aes = k[0]; hmac = k[1];
+        return crypto.subtle.sign('HMAC', hmac, enc.encode('viewer/index.html'));
+      })
+      .then(function (h) { return fetch('x/' + hex(h).slice(0, 40) + '?v=' + VERSIE, { cache: 'no-cache' }); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('fout');
+        return r.arrayBuffer();
+      })
+      .then(function (buf) { return crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(buf, 0, 12), additionalData: enc.encode('viewer/index.html') }, aes, new Uint8Array(buf, 12)); })
+      .then(function () {
+        stap = 'opslaan';
+        try { sessionStorage.removeItem('aero_door'); } catch (e) {}
+        return db(function (s) { s.put({ aes: bits.slice(0, 32), hmac: bits.slice(32), t: Date.now() }, 'sleutel'); });
+      })
+      .then(function () { stap = 'viewer'; return naarViewer(); })
+      .catch(function () {
+        $('knop').disabled = false;
+        if (stap === 'opslaan') { melding('Ingelogd, maar deze browser kan de sleutel niet bewaren (privévenster?). Open de link in Safari of Chrome zelf.'); return; }
+        if (stap === 'viewer' || swFout) { melding(BLOKKADE); return; }
+        $('wachtwoord').value = ''; $('wachtwoord').focus();
+        melding('Gebruikersnaam of wachtwoord klopt niet.');
+      });
+  });
+  $('gebruiker').focus();
+})();
+</script>
+</body>
+</html>
